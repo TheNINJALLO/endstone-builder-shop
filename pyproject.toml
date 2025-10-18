@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "endstone-builder-shop"
+version = "1.0.2"
+description = "An Endstone plugin that allows players to get building materials from NPCs"
+authors = [
+    { name = "TheN1NJ4LL0" }
+]
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "endstone>=0.10.6"
+]
+
+[project.entry-points."endstone"]
+builder-shop = "endstone_builder_shop:BuilderShopPlugin"

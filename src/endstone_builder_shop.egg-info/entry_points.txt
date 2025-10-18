@@ -1,0 +1,2 @@
+[endstone]
+builder-shop = endstone_builder_shop:BuilderShopPlugin
