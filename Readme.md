@@ -59,7 +59,7 @@ An Endstone plugin that provides access to **every obtainable item in Minecraft*
 
 ## Installation
 
-1. Ensure you have Endstone 0.10.6 or higher installed
+1. Ensure you have Endstone 0.11.8 or higher installed
 2. Copy the plugin files to your plugins directory with this structure:
    ```
    plugins/
@@ -159,7 +159,7 @@ The plugin intelligently determines stack sizes:
 
 ## Requirements
 
-- Endstone >= 0.10.6
+- Endstone >= 0.11.8
 - Python >= 3.9
 - Bedrock Dedicated Server compatible with Endstone
 
@@ -177,26 +177,56 @@ endstone-builder-shop/
 ```
 
 ### API Version
-This plugin uses Endstone API version 0.10
+This plugin uses Endstone API version 0.11
 
 ## Customization
 
-### Adding More Items
+### Adding or Removing Items
 
-Edit the `BUILDING_MATERIALS` dictionary in `builder_shop.py`:
+The plugin now uses a configuration file for easy customization! After the first run, a `config.toml` file will be created in the plugin's data folder.
 
-```python
-BUILDING_MATERIALS = {
-    "Your Category": [
-        "item_id_1",
-        "item_id_2",
-    ],
-}
+**Location**: The config file will be created in the plugin's data folder (typically `plugins/builder-shop/config.toml` or similar, depending on your Endstone setup)
+
+To add or remove items:
+1. Edit the `config.toml` file in the plugin's data folder
+2. Add new categories or modify existing ones
+3. Use `/buildershop reload` in-game to apply changes without restarting
+
+**Item Format**:
+- **Simple items**: `"item_id"` (e.g., `"stone"`, `"dirt"`)
+- **Items with data values**: `"item_id:data_value"` (e.g., `"wool:14"` for red wool, `"bed:0"` for white bed)
+
+**Example**:
+```toml
+[categories."My Custom Category"]
+items = [
+    "diamond",
+    "emerald",
+    "wool:14",  # Red Wool
+    "bed:0"     # White Bed
+]
 ```
+
+**Color Data Values** (for wool, carpet, terracotta, concrete, glass, beds, banners):
+- 0 = White, 1 = Orange, 2 = Magenta, 3 = Light Blue
+- 4 = Yellow, 5 = Lime, 6 = Pink, 7 = Gray
+- 8 = Light Gray, 9 = Cyan, 10 = Purple, 11 = Blue
+- 12 = Brown, 13 = Green, 14 = Red, 15 = Black
+
+**Note**: Banners use inverted color order (0=Black, 15=White)
+
+### Reload Configuration
+
+Use the `/buildershop reload` command to reload the configuration without restarting the server:
+- **Permission**: `buildershop.admin` (operator by default)
+- **Usage**: `/buildershop reload`
 
 ### Changing Stack Sizes
 
-Modify the `give_item` method to adjust quantities for specific items.
+Stack sizes are automatically determined based on item names:
+- **128**: Most blocks and stackable items (default)
+- **16**: Items containing: bucket, sign, banner, egg, boat, minecart, stew, soup
+- **1**: Items containing: bed, cake, armor_stand, painting, item_frame, saddle, totem, elytra, music_disc, or specific items like dragon_egg, nether_star, end_crystal
 
 ## Performance
 
@@ -215,6 +245,22 @@ This plugin is open source. Feel free to modify and distribute.
 For issues, questions, or contributions, please refer to your server's plugin documentation.
 
 ## Changelog
+
+### Version 1.1.2
+- **FIXED**: Proper Bedrock Edition 1.21.123 item ID format with data values
+- **UPDATED**: Colored items (wool, beds, banners, terracotta, concrete, glass) now use correct `item:data` format
+- **IMPROVED**: Display names now show proper colors (e.g., "Red Wool", "White Bed")
+- **VERIFIED**: All item IDs match official Bedrock Edition data values
+- Banners correctly use inverted color order (0=Black, 15=White)
+- Terracotta uses `stained_hardened_clay:data` format
+- Concrete powder uses `concretePowder:data` format
+
+### Version 1.1.0
+- **NEW**: Configuration file system - items now stored in `config.toml`
+- **NEW**: `/buildershop reload` command to reload config without server restart
+- **NEW**: Easy customization - add/remove items and categories via config file
+- Improved plugin architecture with dynamic config loading
+- Better error handling and logging
 
 ### Version 1.0.0
 - Initial release

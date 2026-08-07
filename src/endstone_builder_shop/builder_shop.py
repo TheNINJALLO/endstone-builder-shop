@@ -1,16 +1,36 @@
 from endstone.plugin import Plugin
 from endstone.event import event_handler, PlayerInteractActorEvent
-from endstone.form import ActionForm
+from endstone.form import ActionForm, ModalForm, TextInput
+from endstone.command import Command, CommandSender
 from endstone import ColorFormat
 
 
 class BuilderShopPlugin(Plugin):
     """Plugin that provides all obtainable items through NPC interactions"""
 
-    api_version = "0.10"
+    api_version = "0.11"
 
-    # Comprehensive list of ALL items excluding tools, armor, bedrock, arrows, potions, enchanted books, and give-only items
-    BUILDING_MATERIALS = {
+    commands = {
+        "buildershop": {
+            "description": "Builder Shop commands",
+            "usages": ["/buildershop reload"],
+            "permissions": ["buildershop.admin"],
+        }
+    }
+
+    permissions = {
+        "buildershop.admin": {
+            "description": "Allow admins to reload the shop configuration",
+            "default": "op",
+        }
+    }
+
+    def __init__(self):
+        super().__init__()
+        self.building_materials = {}
+
+    # Default fallback list of ALL items (used if config doesn't exist)
+    DEFAULT_BUILDING_MATERIALS = {
         "Stone & Rock Blocks": [
             "stone", "cobblestone", "mossy_cobblestone", "smooth_stone",
             "stone_bricks", "mossy_stone_bricks", "cracked_stone_bricks",
@@ -176,55 +196,45 @@ class BuilderShopPlugin(Plugin):
         ],
         "Glass & Stained Glass": [
             "glass", "tinted_glass",
-            "white_stained_glass", "light_gray_stained_glass", "gray_stained_glass",
-            "black_stained_glass", "brown_stained_glass", "red_stained_glass",
-            "orange_stained_glass", "yellow_stained_glass", "lime_stained_glass",
-            "green_stained_glass", "cyan_stained_glass", "light_blue_stained_glass",
-            "blue_stained_glass", "purple_stained_glass", "magenta_stained_glass",
-            "pink_stained_glass",
-            "glass_pane", "white_stained_glass_pane", "light_gray_stained_glass_pane",
-            "gray_stained_glass_pane", "black_stained_glass_pane", "brown_stained_glass_pane",
-            "red_stained_glass_pane", "orange_stained_glass_pane", "yellow_stained_glass_pane",
-            "lime_stained_glass_pane", "green_stained_glass_pane", "cyan_stained_glass_pane",
-            "light_blue_stained_glass_pane", "blue_stained_glass_pane", "purple_stained_glass_pane",
-            "magenta_stained_glass_pane", "pink_stained_glass_pane"
+            "stained_glass:0", "stained_glass:1", "stained_glass:2", "stained_glass:3",
+            "stained_glass:4", "stained_glass:5", "stained_glass:6", "stained_glass:7",
+            "stained_glass:8", "stained_glass:9", "stained_glass:10", "stained_glass:11",
+            "stained_glass:12", "stained_glass:13", "stained_glass:14", "stained_glass:15",
+            "glass_pane",
+            "stained_glass_pane:0", "stained_glass_pane:1", "stained_glass_pane:2", "stained_glass_pane:3",
+            "stained_glass_pane:4", "stained_glass_pane:5", "stained_glass_pane:6", "stained_glass_pane:7",
+            "stained_glass_pane:8", "stained_glass_pane:9", "stained_glass_pane:10", "stained_glass_pane:11",
+            "stained_glass_pane:12", "stained_glass_pane:13", "stained_glass_pane:14", "stained_glass_pane:15"
         ],
         "Terracotta": [
-            "terracotta", "white_terracotta", "light_gray_terracotta", "gray_terracotta",
-            "black_terracotta", "brown_terracotta", "red_terracotta", "orange_terracotta",
-            "yellow_terracotta", "lime_terracotta", "green_terracotta", "cyan_terracotta",
-            "light_blue_terracotta", "blue_terracotta", "purple_terracotta",
-            "magenta_terracotta", "pink_terracotta",
-            "white_glazed_terracotta", "light_gray_glazed_terracotta", "gray_glazed_terracotta",
-            "black_glazed_terracotta", "brown_glazed_terracotta", "red_glazed_terracotta",
-            "orange_glazed_terracotta", "yellow_glazed_terracotta", "lime_glazed_terracotta",
-            "green_glazed_terracotta", "cyan_glazed_terracotta", "light_blue_glazed_terracotta",
-            "blue_glazed_terracotta", "purple_glazed_terracotta", "magenta_glazed_terracotta",
-            "pink_glazed_terracotta"
+            "terracotta",
+            "stained_hardened_clay:0", "stained_hardened_clay:1", "stained_hardened_clay:2", "stained_hardened_clay:3",
+            "stained_hardened_clay:4", "stained_hardened_clay:5", "stained_hardened_clay:6", "stained_hardened_clay:7",
+            "stained_hardened_clay:8", "stained_hardened_clay:9", "stained_hardened_clay:10", "stained_hardened_clay:11",
+            "stained_hardened_clay:12", "stained_hardened_clay:13", "stained_hardened_clay:14", "stained_hardened_clay:15",
+            "white_glazed_terracotta", "orange_glazed_terracotta", "magenta_glazed_terracotta",
+            "light_blue_glazed_terracotta", "yellow_glazed_terracotta", "lime_glazed_terracotta",
+            "pink_glazed_terracotta", "gray_glazed_terracotta", "silver_glazed_terracotta",
+            "cyan_glazed_terracotta", "purple_glazed_terracotta", "blue_glazed_terracotta",
+            "brown_glazed_terracotta", "green_glazed_terracotta", "red_glazed_terracotta",
+            "black_glazed_terracotta"
         ],
         "Concrete & Powder": [
-            "white_concrete", "light_gray_concrete", "gray_concrete", "black_concrete",
-            "brown_concrete", "red_concrete", "orange_concrete", "yellow_concrete",
-            "lime_concrete", "green_concrete", "cyan_concrete", "light_blue_concrete",
-            "blue_concrete", "purple_concrete", "magenta_concrete", "pink_concrete",
-            "white_concrete_powder", "light_gray_concrete_powder", "gray_concrete_powder",
-            "black_concrete_powder", "brown_concrete_powder", "red_concrete_powder",
-            "orange_concrete_powder", "yellow_concrete_powder", "lime_concrete_powder",
-            "green_concrete_powder", "cyan_concrete_powder", "light_blue_concrete_powder",
-            "blue_concrete_powder", "purple_concrete_powder", "magenta_concrete_powder",
-            "pink_concrete_powder"
+            "concrete:0", "concrete:1", "concrete:2", "concrete:3", "concrete:4", "concrete:5",
+            "concrete:6", "concrete:7", "concrete:8", "concrete:9", "concrete:10", "concrete:11",
+            "concrete:12", "concrete:13", "concrete:14", "concrete:15",
+            "concretePowder:0", "concretePowder:1", "concretePowder:2", "concretePowder:3",
+            "concretePowder:4", "concretePowder:5", "concretePowder:6", "concretePowder:7",
+            "concretePowder:8", "concretePowder:9", "concretePowder:10", "concretePowder:11",
+            "concretePowder:12", "concretePowder:13", "concretePowder:14", "concretePowder:15"
         ],
         "Wool": [
-            "white_wool", "light_gray_wool", "gray_wool", "black_wool",
-            "brown_wool", "red_wool", "orange_wool", "yellow_wool",
-            "lime_wool", "green_wool", "cyan_wool", "light_blue_wool",
-            "blue_wool", "purple_wool", "magenta_wool", "pink_wool"
+            "wool:0", "wool:1", "wool:2", "wool:3", "wool:4", "wool:5", "wool:6", "wool:7",
+            "wool:8", "wool:9", "wool:10", "wool:11", "wool:12", "wool:13", "wool:14", "wool:15"
         ],
         "Carpet": [
-            "white_carpet", "light_gray_carpet", "gray_carpet", "black_carpet",
-            "brown_carpet", "red_carpet", "orange_carpet", "yellow_carpet",
-            "lime_carpet", "green_carpet", "cyan_carpet", "light_blue_carpet",
-            "blue_carpet", "purple_carpet", "magenta_carpet", "pink_carpet",
+            "carpet:0", "carpet:1", "carpet:2", "carpet:3", "carpet:4", "carpet:5", "carpet:6", "carpet:7",
+            "carpet:8", "carpet:9", "carpet:10", "carpet:11", "carpet:12", "carpet:13", "carpet:14", "carpet:15",
             "moss_carpet"
         ],
         "Sand & Sandstone": [
@@ -321,16 +331,12 @@ class BuilderShopPlugin(Plugin):
             "shulker_box"
         ],
         "Banners": [
-            "white_banner", "light_gray_banner", "gray_banner", "black_banner",
-            "brown_banner", "red_banner", "orange_banner", "yellow_banner",
-            "lime_banner", "green_banner", "cyan_banner", "light_blue_banner",
-            "blue_banner", "purple_banner", "magenta_banner", "pink_banner"
+            "banner:15", "banner:1", "banner:2", "banner:3", "banner:4", "banner:5", "banner:6", "banner:7",
+            "banner:8", "banner:9", "banner:10", "banner:11", "banner:12", "banner:13", "banner:14", "banner:0"
         ],
         "Beds": [
-            "white_bed", "light_gray_bed", "gray_bed", "black_bed",
-            "brown_bed", "red_bed", "orange_bed", "yellow_bed",
-            "lime_bed", "green_bed", "cyan_bed", "light_blue_bed",
-            "blue_bed", "purple_bed", "magenta_bed", "pink_bed"
+            "bed:0", "bed:1", "bed:2", "bed:3", "bed:4", "bed:5", "bed:6", "bed:7",
+            "bed:8", "bed:9", "bed:10", "bed:11", "bed:12", "bed:13", "bed:14", "bed:15"
         ],
         "Candles": [
             "candle", "white_candle", "light_gray_candle", "gray_candle",
@@ -502,12 +508,135 @@ class BuilderShopPlugin(Plugin):
     def on_enable(self):
         """Called when the plugin is enabled"""
         self.logger.info(f"{ColorFormat.GREEN}Builder Shop Plugin enabled!")
+
+        # Ensure data folder exists
+        self.data_folder.mkdir(parents=True, exist_ok=True)
+
+        # Save default config if it doesn't exist
+        try:
+            self.save_default_config()
+        except FileNotFoundError:
+            # If config.toml doesn't exist in package, create it manually
+            self.logger.warning("Default config not found in package, creating from defaults")
+            self.create_default_config()
+
+        # Load configuration
+        self.load_shop_config()
+
+        # Register events
         self.register_events(self)
+
         self.logger.info(f"{ColorFormat.YELLOW}Interact with NPCs tagged 'builder' to open the shop")
+        self.logger.info(f"{ColorFormat.YELLOW}Use /buildershop reload to reload the configuration")
 
     def on_disable(self):
         """Called when the plugin is disabled"""
         self.logger.info(f"{ColorFormat.RED}Builder Shop Plugin disabled!")
+
+    def on_command(self, sender: CommandSender, command: Command, args: list[str]) -> bool:
+        """Handle plugin commands"""
+        if command.name == "buildershop":
+            if len(args) == 0:
+                sender.send_message(f"{ColorFormat.YELLOW}Usage: /buildershop reload")
+                return True
+
+            if args[0].lower() == "reload":
+                try:
+                    self.load_shop_config()
+                    sender.send_message(f"{ColorFormat.GREEN}✓ Builder Shop configuration reloaded successfully!")
+                    self.logger.info(f"{sender.name} reloaded the Builder Shop configuration")
+                except Exception as e:
+                    sender.send_error_message(f"{ColorFormat.RED}Failed to reload configuration: {str(e)}")
+                    self.logger.error(f"Error reloading configuration: {str(e)}")
+                return True
+            else:
+                sender.send_message(f"{ColorFormat.RED}Unknown subcommand. Usage: /buildershop reload")
+                return True
+
+        return False
+
+    def create_default_config(self):
+        """Create default config file from DEFAULT_BUILDING_MATERIALS"""
+        config_path = self.data_folder / "config.toml"
+
+        # Create config structure
+        config_data = {
+            "_comment": [
+                "Builder Shop Plugin Configuration",
+                "This file contains all the items available in the shop organized by category",
+                "You can add, remove, or modify categories and items as needed",
+                "After making changes, use /buildershop reload to apply them in-game",
+                "",
+                "Stack size rules:",
+                "- Items with 'bucket', 'sign', 'banner', 'egg', 'boat', 'minecart', 'stew', or 'soup' in the name get 16",
+                "- Items with 'bed', 'cake', 'armor_stand', 'painting', 'item_frame', 'saddle', 'totem', or 'elytra' in the name get 1",
+                "- Items with 'music_disc' in the name or items 'dragon_egg', 'nether_star', 'end_crystal' get 1",
+                "- All other items get 128"
+            ],
+            "categories": {}
+        }
+
+        # Convert DEFAULT_BUILDING_MATERIALS to config format
+        for category_name, items in self.DEFAULT_BUILDING_MATERIALS.items():
+            config_data["categories"][category_name] = {"items": items}
+
+        # Write config file
+        with open(config_path, 'w') as f:
+            # Write comments manually since toml doesn't support them well
+            f.write("# Builder Shop Plugin Configuration\n")
+            f.write("# This file contains all the items available in the shop organized by category\n")
+            f.write("# You can add, remove, or modify categories and items as needed\n")
+            f.write("# After making changes, use /buildershop reload to apply them in-game\n")
+            f.write("#\n")
+            f.write("# Stack size rules:\n")
+            f.write("# - Items with 'bucket', 'sign', 'banner', 'egg', 'boat', 'minecart', 'stew', or 'soup' in the name get 16\n")
+            f.write("# - Items with 'bed', 'cake', 'armor_stand', 'painting', 'item_frame', 'saddle', 'totem', or 'elytra' in the name get 1\n")
+            f.write("# - Items with 'music_disc' in the name or items 'dragon_egg', 'nether_star', 'end_crystal' get 1\n")
+            f.write("# - All other items get 128\n\n")
+            f.write("[categories]\n\n")
+
+            # Write each category
+            for category_name, items in self.DEFAULT_BUILDING_MATERIALS.items():
+                f.write(f'[categories."{category_name}"]\n')
+                f.write("items = [\n")
+                for i, item in enumerate(items):
+                    if i < len(items) - 1:
+                        f.write(f'    "{item}",\n')
+                    else:
+                        f.write(f'    "{item}"\n')
+                f.write("]\n\n")
+
+        self.logger.info(f"Created default config at {config_path}")
+
+    def load_shop_config(self):
+        """Load shop configuration from config.toml"""
+        try:
+            # Reload the config from disk
+            config = self.reload_config()
+
+            # Clear existing materials
+            self.building_materials = {}
+
+            # Load categories from config
+            if "categories" in config:
+                categories = config["categories"]
+                for category_name, category_data in categories.items():
+                    if isinstance(category_data, dict) and "items" in category_data:
+                        self.building_materials[category_name] = category_data["items"]
+                        self.logger.info(f"Loaded category '{category_name}' with {len(category_data['items'])} items")
+
+            # If no categories loaded, use defaults
+            if not self.building_materials:
+                self.logger.warning("No categories found in config, using defaults")
+                self.building_materials = self.DEFAULT_BUILDING_MATERIALS.copy()
+
+            total_items = sum(len(items) for items in self.building_materials.values())
+            self.logger.info(f"{ColorFormat.GREEN}Loaded {len(self.building_materials)} categories with {total_items} total items")
+
+        except Exception as e:
+            self.logger.error(f"Error loading config: {str(e)}")
+            self.logger.warning("Using default configuration")
+            self.building_materials = self.DEFAULT_BUILDING_MATERIALS.copy()
 
     @event_handler
     def on_player_interact_actor(self, event: PlayerInteractActorEvent):
@@ -520,6 +649,48 @@ class BuilderShopPlugin(Plugin):
             event.cancel()  # Prevent default interaction
             self.show_category_menu(player)
 
+    def get_display_name(self, item_id: str, data_value: int) -> str:
+        """Get a proper display name for an item with data value"""
+        # Color mapping for data values 0-15
+        color_names = [
+            "White", "Orange", "Magenta", "Light Blue", "Yellow", "Lime", "Pink", "Gray",
+            "Light Gray", "Cyan", "Purple", "Blue", "Brown", "Green", "Red", "Black"
+        ]
+
+        # Items that use color data values
+        colored_items = {
+            "wool": "Wool",
+            "carpet": "Carpet",
+            "stained_hardened_clay": "Terracotta",
+            "concrete": "Concrete",
+            "concretePowder": "Concrete Powder",
+            "bed": "Bed",
+            "banner": "Banner",
+            "stained_glass": "Stained Glass",
+            "stained_glass_pane": "Stained Glass Pane",
+            "shulker_box": "Shulker Box",
+            "candle": "Candle"
+        }
+
+        # Check if this is a colored item
+        for item_key, item_name in colored_items.items():
+            if item_id == item_key:
+                if 0 <= data_value <= 15:
+                    # Special case for banners which have inverted color order
+                    if item_id == "banner":
+                        # Banner data values are inverted: 0=Black, 1=Red, 2=Green, 3=Brown, 4=Blue,
+                        # 5=Purple, 6=Cyan, 7=Light Gray, 8=Gray, 9=Pink, 10=Lime, 11=Yellow,
+                        # 12=Light Blue, 13=Magenta, 14=Orange, 15=White
+                        banner_colors = ["Black", "Red", "Green", "Brown", "Blue", "Purple",
+                                       "Cyan", "Light Gray", "Gray", "Pink", "Lime", "Yellow",
+                                       "Light Blue", "Magenta", "Orange", "White"]
+                        return f"{banner_colors[data_value]} {item_name}"
+                    else:
+                        return f"{color_names[data_value]} {item_name}"
+
+        # Default: just format the item ID nicely
+        return item_id.replace("_", " ").title()
+
     def show_category_menu(self, player):
         """Show the main category selection form"""
         form = ActionForm(
@@ -527,8 +698,14 @@ class BuilderShopPlugin(Plugin):
             content=f"{ColorFormat.GRAY}Select a category to browse items.\n{ColorFormat.YELLOW}Each item gives you 128 (or max stack)!"
         )
 
+        # Add search button at the top
+        form.add_button(
+            text=f"{ColorFormat.AQUA}🔍 Search Items",
+            on_click=lambda p: self.show_search_form(p)
+        )
+
         # Add a button for each category
-        for category in self.BUILDING_MATERIALS.keys():
+        for category in self.building_materials.keys():
             form.add_button(
                 text=category,
                 on_click=lambda p, cat=category: self.show_items_menu(p, cat)
@@ -536,9 +713,173 @@ class BuilderShopPlugin(Plugin):
 
         player.send_form(form)
 
+    def show_search_form(self, player):
+        """Show the search input form"""
+        import json
+        
+        form = ModalForm(title=f"{ColorFormat.GOLD}{ColorFormat.BOLD}Search Items")
+        form.add_control(TextInput(
+            label=f"{ColorFormat.GRAY}Enter item name to search:",
+            placeholder="e.g., stone, oak, glass..."
+        ))
+        
+        def on_submit(p, data):
+            if data is None:
+                self.show_category_menu(p)
+                return
+            
+            # Debug: log the raw data
+            self.logger.info(f"Search form raw data: {data} (type: {type(data).__name__})")
+            
+            # Parse the data - it might be a JSON string or a list
+            query = ""
+            try:
+                if isinstance(data, str):
+                    # Data is a JSON string like '["oak"]'
+                    parsed = json.loads(data)
+                    if isinstance(parsed, list) and len(parsed) > 0:
+                        query = str(parsed[0])
+                elif isinstance(data, list) and len(data) > 0:
+                    # Data is already a list
+                    query = str(data[0])
+                else:
+                    query = str(data)
+            except (json.JSONDecodeError, Exception) as e:
+                self.logger.error(f"Error parsing search data: {e}")
+                query = str(data) if data else ""
+            
+            self.logger.info(f"Parsed search query: '{query}'")
+            self.show_search_results(p, query)
+        
+        form.on_submit = on_submit
+        form.on_close = lambda p: self.show_category_menu(p)
+        player.send_form(form)
+
+    def show_search_results(self, player, search_query: str):
+        """Show search results based on query"""
+        if not search_query or not search_query.strip():
+            player.send_message(f"{ColorFormat.RED}Please enter a search term.")
+            self.show_search_form(player)
+            return
+
+        search_query = search_query.strip().lower()
+        results = []
+
+        # Search through all categories and items
+        for category, items in self.building_materials.items():
+            for item_id in items:
+                # Parse item ID for display name
+                data_value = 0
+                base_item_id = item_id
+                if ":" in item_id:
+                    parts = item_id.split(":")
+                    base_item_id = parts[0]
+                    data_value = int(parts[1])
+
+                # Get display name for searching
+                display_name = self.get_display_name(base_item_id, data_value)
+
+                # Check if query matches item ID or display name
+                if search_query in base_item_id.lower() or search_query in display_name.lower():
+                    results.append((item_id, display_name, category))
+
+        if not results:
+            form = ActionForm(
+                title=f"{ColorFormat.GOLD}{ColorFormat.BOLD}No Results",
+                content=f"{ColorFormat.RED}No items found matching '{search_query}'.\n{ColorFormat.GRAY}Try a different search term."
+            )
+            form.add_button(
+                text=f"{ColorFormat.AQUA}🔍 Search Again",
+                on_click=lambda p: self.show_search_form(p)
+            )
+            form.add_button(
+                text=f"{ColorFormat.RED}← Back to Categories",
+                on_click=lambda p: self.show_category_menu(p)
+            )
+            player.send_form(form)
+            return
+
+        # Limit results to 50 to avoid form overflow
+        display_results = results[:50]
+        total_found = len(results)
+
+        form = ActionForm(
+            title=f"{ColorFormat.GOLD}{ColorFormat.BOLD}Search: {search_query}",
+            content=f"{ColorFormat.GREEN}Found {total_found} items" + (f" (showing first 50)" if total_found > 50 else "")
+        )
+
+        # Add search again button at top
+        form.add_button(
+            text=f"{ColorFormat.AQUA}🔍 Search Again",
+            on_click=lambda p: self.show_search_form(p)
+        )
+
+        # Add result buttons
+        for item_id, display_name, category in display_results:
+            form.add_button(
+                text=f"{display_name}\n{ColorFormat.DARK_GRAY}{category}",
+                on_click=lambda p, item=item_id, cat=category: self.give_item_from_search(p, item, cat, search_query)
+            )
+
+        # Add back button
+        form.add_button(
+            text=f"{ColorFormat.RED}← Back to Categories",
+            on_click=lambda p: self.show_category_menu(p)
+        )
+
+        player.send_form(form)
+
+    def give_item_from_search(self, player, item_id: str, category: str, search_query: str):
+        """Give item and return to search results"""
+        try:
+            # Parse item ID and data value
+            data_value = 0
+            base_item_id = item_id
+
+            if ":" in item_id:
+                parts = item_id.split(":")
+                base_item_id = parts[0]
+                data_value = int(parts[1])
+
+            # Determine stack amount
+            amount = 128
+            if any(x in base_item_id for x in ["bucket", "sign", "banner", "egg", "boat", "minecart", "stew", "soup"]):
+                amount = 16
+            elif any(x in base_item_id for x in
+                     ["bed", "cake", "armor_stand", "painting", "item_frame", "saddle", "totem", "elytra"]):
+                amount = 1
+            elif "music_disc" in base_item_id or base_item_id in ["dragon_egg", "nether_star", "end_crystal"]:
+                amount = 1
+
+            # Give the item
+            command = f'give "{player.name}" {base_item_id} {amount} {data_value}'
+            self.server.dispatch_command(self.server.command_sender, command)
+
+            # Format display name
+            display_name = self.get_display_name(base_item_id, data_value)
+
+            # Send success message
+            player.send_message(
+                f"{ColorFormat.GREEN}✓ You received {ColorFormat.YELLOW}{amount}x {display_name}"
+            )
+
+            # Log the transaction
+            self.logger.info(
+                f"{player.name} received {amount}x {item_id} from Builder Shop (search)"
+            )
+
+            # Return to search results
+            self.show_search_results(player, search_query)
+
+        except Exception as e:
+            player.send_error_message(
+                f"{ColorFormat.RED}Failed to give item: {str(e)}"
+            )
+            self.logger.error(f"Error giving item to {player.name}: {str(e)}")
+
     def show_items_menu(self, player, category: str):
         """Show items in the selected category"""
-        items = self.BUILDING_MATERIALS.get(category, [])
+        items = self.building_materials.get(category, [])
 
         form = ActionForm(
             title=f"{ColorFormat.GOLD}{ColorFormat.BOLD}{category}",
@@ -547,8 +888,18 @@ class BuilderShopPlugin(Plugin):
 
         # Add button for each item in category
         for item_id in items:
-            # Format the display name (replace underscores with spaces and title case)
-            display_name = item_id.replace("_", " ").title()
+            # Parse item ID and data value for display name
+            data_value = 0
+            base_item_id = item_id
+
+            if ":" in item_id:
+                parts = item_id.split(":")
+                base_item_id = parts[0]
+                data_value = int(parts[1])
+
+            # Get proper display name
+            display_name = self.get_display_name(base_item_id, data_value)
+
             form.add_button(
                 text=display_name,
                 on_click=lambda p, item=item_id: self.give_item(p, item, category)
@@ -565,26 +916,36 @@ class BuilderShopPlugin(Plugin):
     def give_item(self, player, item_id: str, category: str):
         """Give the player 128 of the selected item (or max stack size)"""
         try:
+            # Parse item ID and data value
+            data_value = 0
+            base_item_id = item_id
+
+            if ":" in item_id:
+                parts = item_id.split(":")
+                base_item_id = parts[0]
+                data_value = int(parts[1])
+
             # For most items give 128, but some have smaller stack sizes
             # Items like tools, buckets, etc. stack to 1 or 16
             # Most blocks stack to 64, but we give 128 for convenience
             amount = 128
 
             # Items that stack to 16 or less
-            if any(x in item_id for x in ["bucket", "sign", "banner", "egg", "boat", "minecart", "stew", "soup"]):
+            if any(x in base_item_id for x in ["bucket", "sign", "banner", "egg", "boat", "minecart", "stew", "soup"]):
                 amount = 16
-            elif any(x in item_id for x in
+            elif any(x in base_item_id for x in
                      ["bed", "cake", "armor_stand", "painting", "item_frame", "saddle", "totem", "elytra"]):
                 amount = 1
-            elif "music_disc" in item_id or item_id in ["dragon_egg", "nether_star", "end_crystal"]:
+            elif "music_disc" in base_item_id or base_item_id in ["dragon_egg", "nether_star", "end_crystal"]:
                 amount = 1
 
             # Use the give command to add items with quoted player name to handle spaces
-            command = f'give "{player.name}" {item_id} {amount}'
+            # Format: /give <player> <item> <amount> <data>
+            command = f'give "{player.name}" {base_item_id} {amount} {data_value}'
             self.server.dispatch_command(self.server.command_sender, command)
 
             # Format display name
-            display_name = item_id.replace("_", " ").title()
+            display_name = self.get_display_name(base_item_id, data_value)
 
             # Send success message
             player.send_message(
