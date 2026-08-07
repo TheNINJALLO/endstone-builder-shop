@@ -20,8 +20,9 @@
 </p>
 
 <p align="center">
-  <a href="#overview">Overview</a> &bull;
-  <a href="#compatibility">Compatibility</a> &bull;
+  <a href="#what-it-does">What it does</a> &bull;
+  <a href="#how-to-use">How to use</a> &bull;
+  <a href="#commands-and-permissions">Commands</a> &bull;
   <a href="#install">Install</a> &bull;
   <a href="https://github.com/TheNINJALLO/endstone-builder-shop/releases">Releases</a>
 </p>
@@ -30,9 +31,23 @@
 
 An Endstone plugin that allows players to get building materials from NPCs. This release is aligned with Endstone 0.11.8 and Minecraft Bedrock Dedicated Server 1.26.40, and is distributed as a Python wheel for direct installation in an Endstone server.
 
-## Capabilities
+## What it does
 
--
+- Opens a category-based building-material catalog when a player interacts with a tagged NPC.
+- Supplies obtainable blocks in sensible stack sizes without requiring individual shop commands.
+- Supports multiple shop NPCs and runtime configuration reloads.
+
+## How to use
+
+1. Spawn an NPC and tag it with `/tag @e[type=npc,c=1] add builder`.
+2. Interact with the NPC to verify that the category menu opens and items can be selected.
+3. After changing the generated shop configuration, run `/buildershop reload` as an operator.
+
+## Commands and permissions
+
+| Command / usage | What it does | Access |
+|---|---|---|
+| `/buildershop reload` | Builder Shop commands | `buildershop.admin` |
 
 ## Compatibility
 
